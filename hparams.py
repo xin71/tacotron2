@@ -10,7 +10,7 @@ def create_hparams(hparams_string=None, verbose=False):
         # Experiment Parameters        #
         ################################
         epochs=500,
-        iters_per_checkpoint=1000,
+        iters_per_checkpoint=300,
         seed=1234,
         dynamic_loss_scaling=True,
         fp16_run=False,
@@ -25,21 +25,24 @@ def create_hparams(hparams_string=None, verbose=False):
         # Data Parameters             #
         ################################
         load_mel_from_disk=False,
-        training_files='filelists/ljs_audio_text_train_filelist.txt',
-        validation_files='filelists/ljs_audio_text_val_filelist.txt',
+        training_files='filelists/IEMOCAP/train_filelist.txt',
+        validation_files='filelists/IEMOCAP/val_filelist.txt',
+        training_files_alt='filelists/IEMOCAP/train_filelist_alt.txt',
+        validation_files_alt='filelists/IEMOCAP/val_filelist_alt.txt',
         text_cleaners=['english_cleaners'],
 
         ################################
         # Audio Parameters             #
         ################################
         max_wav_value=32768.0,
-        sampling_rate=22050,
+        sampling_rate=16000,
         filter_length=1024,
         hop_length=256,
         win_length=1024,
         n_mel_channels=80,
         mel_fmin=0.0,
         mel_fmax=8000.0,
+        ref_enc_filters=[32, 32, 64, 64, 128, 128],
 
         ################################
         # Model Parameters             #
@@ -51,6 +54,7 @@ def create_hparams(hparams_string=None, verbose=False):
         encoder_kernel_size=5,
         encoder_n_convolutions=3,
         encoder_embedding_dim=512,
+        final_encoder_embedding_dim=640,
 
         # Decoder parameters
         n_frames_per_step=1,  # currently only 1 is supported
@@ -78,10 +82,10 @@ def create_hparams(hparams_string=None, verbose=False):
         # Optimization Hyperparameters #
         ################################
         use_saved_learning_rate=False,
-        learning_rate=1e-3,
+        learning_rate=1.25e-4,
         weight_decay=1e-6,
         grad_clip_thresh=1.0,
-        batch_size=64,
+        batch_size=8,
         mask_padding=True  # set model's padded outputs to padded values
     )
 

@@ -5,7 +5,7 @@ from torch import nn
 from torch.nn import functional as F
 from layers import ConvNorm, LinearNorm
 from utils import to_gpu, get_mask_from_lengths
-
+import math
 
 class LocationLayer(nn.Module):
     def __init__(self, attention_n_filters, attention_kernel_size,
@@ -206,7 +206,7 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
         self.n_mel_channels = hparams.n_mel_channels
         self.n_frames_per_step = hparams.n_frames_per_step
-        self.encoder_embedding_dim = hparams.encoder_embedding_dim
+        self.encoder_embedding_dim = hparams.final_encoder_embedding_dim
         self.attention_rnn_dim = hparams.attention_rnn_dim
         self.decoder_rnn_dim = hparams.decoder_rnn_dim
         self.prenet_dim = hparams.prenet_dim
@@ -220,24 +220,24 @@ class Decoder(nn.Module):
             [hparams.prenet_dim, hparams.prenet_dim])
 
         self.attention_rnn = nn.LSTMCell(
-            hparams.prenet_dim + hparams.encoder_embedding_dim,
+            hparams.prenet_dim + hparams.final_encoder_embedding_dim,
             hparams.attention_rnn_dim)
 
         self.attention_layer = Attention(
-            hparams.attention_rnn_dim, hparams.encoder_embedding_dim,
+            hparams.attention_rnn_dim, hparams.final_encoder_embedding_dim,
             hparams.attention_dim, hparams.attention_location_n_filters,
             hparams.attention_location_kernel_size)
 
         self.decoder_rnn = nn.LSTMCell(
-            hparams.attention_rnn_dim + hparams.encoder_embedding_dim,
+            hparams.attention_rnn_dim + hparams.final_encoder_embedding_dim,
             hparams.decoder_rnn_dim, 1)
 
         self.linear_projection = LinearNorm(
-            hparams.decoder_rnn_dim + hparams.encoder_embedding_dim,
+            hparams.decoder_rnn_dim + hparams.final_encoder_embedding_dim,
             hparams.n_mel_channels * hparams.n_frames_per_step)
 
         self.gate_layer = LinearNorm(
-            hparams.decoder_rnn_dim + hparams.encoder_embedding_dim, 1,
+            hparams.decoder_rnn_dim + hparams.final_encoder_embedding_dim, 1,
             bias=True, w_init_gain='sigmoid')
 
     def get_go_frame(self, memory):
@@ -349,6 +349,7 @@ class Decoder(nn.Module):
         gate_output: gate output energies
         attention_weights:
         """
+        # print('attention context', self.attention_context.shape)
         cell_input = torch.cat((decoder_input, self.attention_context), -1)
         self.attention_hidden, self.attention_cell = self.attention_rnn(
             cell_input, (self.attention_hidden, self.attention_cell))
@@ -397,7 +398,6 @@ class Decoder(nn.Module):
         decoder_inputs = self.parse_decoder_inputs(decoder_inputs)
         decoder_inputs = torch.cat((decoder_input, decoder_inputs), dim=0)
         decoder_inputs = self.prenet(decoder_inputs)
-
         self.initialize_decoder_states(
             memory, mask=~get_mask_from_lengths(memory_lengths))
 
@@ -454,6 +454,102 @@ class Decoder(nn.Module):
         return mel_outputs, gate_outputs, alignments
 
 
+
+class ReferenceEncoder(nn.Module):
+    '''
+    inputs --- [N, Ty/r, n_mels*r]  mels
+    outputs --- [N, ref_enc_gru_size]
+    '''
+
+    def __init__(self, hparams):
+
+        super().__init__()
+        K = len(hparams.ref_enc_filters)
+        filters = [1] + hparams.ref_enc_filters
+        convs = [nn.Conv2d(in_channels=filters[i],
+                           out_channels=filters[i + 1],
+                           kernel_size=(3, 3),
+                           stride=(2, 2),
+                           padding=(1, 1)) for i in range(K)]
+        self.convs = nn.ModuleList(convs)
+        self.bns = nn.ModuleList([nn.BatchNorm2d(num_features=hparams.ref_enc_filters[i]) for i in range(K)])
+
+        out_channels = self.calculate_channels(hparams.n_mel_channels, 3, 2, 1, K)
+        self.gru = nn.GRU(input_size=hparams.ref_enc_filters[-1] * out_channels,
+                          hidden_size=128,
+                          batch_first=True)
+
+    def forward(self, inputs, hparams):
+        N = inputs.size(0)
+        out = inputs.view(N, 1, -1, hparams.n_mel_channels)  # [N, 1, Ty, n_mels]
+        for conv, bn in zip(self.convs, self.bns):
+            out = conv(out)
+            out = bn(out)
+            out = F.relu(out)  # [N, 128, Ty//2^K, n_mels//2^K]
+
+        out = out.transpose(1, 2)  # [N, Ty//2^K, 128, n_mels//2^K]
+        T = out.size(1)
+        N = out.size(0)
+        out = out.contiguous().view(N, T, -1)  # [N, Ty//2^K, 128*n_mels//2^K]
+
+        self.gru.flatten_parameters()
+        memory, out = self.gru(out)  # out --- [1, N, E//2]
+        out = nn.Tanh()(out)
+        return out.squeeze(0)
+
+    def calculate_channels(self, L, kernel_size, stride, pad, n_convs):
+        for i in range(n_convs):
+            L = (L - kernel_size + 2 * pad) // stride + 1
+        return L
+
+
+# class RefConv2d(nn.Module):
+#
+#     def __init__(self, in_channels, out_channels, kernel_size, stride=1, dilation=1):
+#         super(RefConv2d, self).__init__()
+#         self.F = kernel_size
+#         self.S = stride
+#         self.D = dilation
+#         self.layer = nn.Conv2d(in_channels, out_channels, kernel_size, stride, dilation=dilation)
+#         self.batchnorm = nn.BatchNorm2d(out_channels)
+#     def forward(self, x_in):
+#         N, C, H, W = x_in.shape
+#         H2 = math.ceil(H / self.S)
+#         W2 = math.ceil(W / self.S)
+#         Pr = (H2 - 1) * self.S + (self.F - 1) * self.D + 1 - H
+#         Pc = (W2 - 1) * self.S + (self.F - 1) * self.D + 1 - W
+#         x_pad = nn.ZeroPad2d((Pr//2, Pr - Pr//2, Pc//2, Pc - Pc//2))(x_in)
+#         x_out = self.layer(x_pad)
+#         x_out = self.batchnorm(x_out)
+#         return x_out
+
+
+
+# def referenceencoder(x):
+#     x = x.unsqueeze(1)
+#     x = nn.Sequential(
+#         RefConv2d(1, 32, 3, stride=2),
+#         nn.ReLU(),
+#         RefConv2d(32, 32, 3, stride=2),
+#         nn.ReLU(),
+#         RefConv2d(32, 64, 3, stride=2),
+#         nn.ReLU(),
+#         RefConv2d(64, 64, 3, stride=2),
+#         nn.ReLU(),
+#         RefConv2d(64, 128, 3, stride=2),
+#         nn.ReLU(),
+#         RefConv2d(128, 128, 3, stride=2),
+#         nn.ReLU())(x)
+#     x = torch.transpose(x, 1, 2)
+#     print('after transpose', x.shape)
+#     x = x.view(x.shape[0], x.shape[1], -1)  # Size([batch, reference_input_length//64, 128*num_mel_channels//64])
+#     print('before input to rnn', x.shape)
+#     x = nn.GRU(x.shape[-1], 128)(x)
+#     x = nn.Linear(128, 128)(x)
+#     x = nn.Tanh()(x)
+#     return x
+
+
 class Tacotron2(nn.Module):
     def __init__(self, hparams):
         super(Tacotron2, self).__init__()
@@ -469,6 +565,8 @@ class Tacotron2(nn.Module):
         self.encoder = Encoder(hparams)
         self.decoder = Decoder(hparams)
         self.postnet = Postnet(hparams)
+        self.ref_encoder = ReferenceEncoder(hparams)
+        self.hparams = hparams
 
     def parse_batch(self, batch):
         text_padded, input_lengths, mel_padded, gate_padded, \
@@ -497,16 +595,28 @@ class Tacotron2(nn.Module):
         return outputs
 
     def forward(self, inputs):
-        text_inputs, text_lengths, mels, max_len, output_lengths = inputs
+        x, x_alt = inputs
+        (text_inputs, text_lengths, mels, max_len, output_lengths) = x
+        (_, _, alt_mels, alt_max_len, alt_output_lengths) = x_alt
+        batch_size = mels.shape[0]
         text_lengths, output_lengths = text_lengths.data, output_lengths.data
 
         embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
-
         encoder_outputs = self.encoder(embedded_inputs, text_lengths)
+        encoder_ref_outputs = self.ref_encoder(alt_mels, self.hparams)
+
+        expand_ref_number = encoder_outputs.shape[1]
+        encoder_ref_outputs = encoder_ref_outputs.repeat(1, expand_ref_number).view(batch_size,
+                                                                                    expand_ref_number, -1)
+        # print('original mels: ', mels.shape)
+        # print('matched mels', alt_mels.shape)
+        # print('encoder_ref_outputs', encoder_ref_outputs.shape)
+        # print('encoder_outputs', encoder_outputs.shape)
+        # print('======================================')
+        final_encoder_out = torch.cat((encoder_outputs, encoder_ref_outputs), -1)
 
         mel_outputs, gate_outputs, alignments = self.decoder(
-            encoder_outputs, mels, memory_lengths=text_lengths)
-
+            final_encoder_out, mels, memory_lengths=text_lengths)
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
 
