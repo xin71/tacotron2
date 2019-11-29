@@ -78,10 +78,10 @@ def create_hparams(hparams_string=None, verbose=False):
         # Optimization Hyperparameters #
         ################################
         use_saved_learning_rate=False,
-        learning_rate=1.25e-4,
+        learning_rate=1e-3,
         weight_decay=1e-6,
         grad_clip_thresh=1.0,
-        batch_size=8,
+        batch_size=32,
         mask_padding=True  # set model's padded outputs to padded values
     )
 
