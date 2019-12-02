@@ -409,7 +409,6 @@ class Decoder(nn.Module):
             mel_outputs += [mel_output.squeeze(1)]
             gate_outputs += [gate_output.squeeze()]
             alignments += [attention_weights]
-
         mel_outputs, gate_outputs, alignments = self.parse_decoder_outputs(
             mel_outputs, gate_outputs, alignments)
 
@@ -447,7 +446,6 @@ class Decoder(nn.Module):
                 break
 
             decoder_input = mel_output
-
         mel_outputs, gate_outputs, alignments = self.parse_decoder_outputs(
             mel_outputs, gate_outputs, alignments)
 
