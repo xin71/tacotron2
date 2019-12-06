@@ -11,9 +11,13 @@ def get_mask_from_lengths(lengths):
     return mask
 
 
-def load_wav_to_torch(full_path):
+def load_wav_to_torch(full_path, dataset='IEMOCAP'):
     # sampling_rate, data = read(full_path)
-    data, sampling_rate = librosa.load(full_path, sr=16000)
+    if dataset == 'LJ':
+        data, sampling_rate = librosa.load(full_path, sr=22050)
+    else:
+        data, sampling_rate = librosa.load(full_path, sr=16000)
+    print('data2: ', data)
     data, _ = librosa.effects.trim(data)
     return torch.FloatTensor(data.astype(np.float32)), sampling_rate
 
