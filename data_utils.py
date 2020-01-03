@@ -40,12 +40,12 @@ class TextMelLoader(torch.utils.data.Dataset):
             if sampling_rate != self.stft.sampling_rate:
                 raise ValueError("{} {} SR doesn't match target {} SR".format(
                     sampling_rate, self.stft.sampling_rate))
-            audio_norm = audio / self.max_wav_value
+            # audio_norm = audio / self.max_wav_value
+            audio_norm = audio
             audio_norm = audio_norm.unsqueeze(0)
             audio_norm = torch.autograd.Variable(audio_norm, requires_grad=False)
             melspec = self.stft.mel_spectrogram(audio_norm)
             melspec = torch.squeeze(melspec, 0)
-            print('melspec shape', melspec.shape)
         else:
             melspec = torch.from_numpy(np.load(filename))
             assert melspec.size(0) == self.stft.n_mel_channels, (

@@ -2,7 +2,8 @@ import numpy as np
 from scipy.io.wavfile import read
 import torch
 import librosa
-
+import hparams
+hparams = hparams.create_hparams()
 
 def get_mask_from_lengths(lengths):
     max_len = torch.max(lengths).item()
@@ -17,8 +18,7 @@ def load_wav_to_torch(full_path, dataset='IEMOCAP'):
         data, sampling_rate = librosa.load(full_path, sr=22050)
     else:
         data, sampling_rate = librosa.load(full_path, sr=16000)
-    print('data2: ', data)
-    data, _ = librosa.effects.trim(data)
+    data, _ = librosa.effects.trim(data, top_db=20, frame_length=hparams.win_length, hop_length=hparams.hop_length)
     return torch.FloatTensor(data.astype(np.float32)), sampling_rate
 
 
