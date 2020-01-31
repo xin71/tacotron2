@@ -256,15 +256,16 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                 logger.log_training(
                     reduced_loss, grad_norm, learning_rate, duration, iteration)
 
-            if not is_overflow and (iteration % hparams.iters_per_checkpoint == 0):
+            if not is_overflow and (iteration % hparams.iters_per_validat == 0):
                 validate(model, criterion, valset, valset_alt, iteration,
                          hparams.batch_size, n_gpus, collate_fn, logger,
                          hparams.distributed_run, rank)
                 if rank == 0:
-                    checkpoint_path = os.path.join(
-                        output_directory, "checkpoint_{}".format(iteration))
-                    save_checkpoint(model, optimizer, learning_rate, iteration,
-                                    checkpoint_path)
+                    if iteration % hparams.iters_per_checkpoint == 0:
+                        checkpoint_path = os.path.join(
+                            output_directory, "checkpoint_{}".format(iteration))
+                        save_checkpoint(model, optimizer, learning_rate, iteration,
+                                        checkpoint_path)
 
             iteration += 1
 
