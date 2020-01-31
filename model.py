@@ -426,7 +426,7 @@ class Decoder(nn.Module):
         gate_outputs: gate outputs from the decoder
         alignments: sequence of attention weights from the decoder
         """
-        decoder_input = self.get_go_frame(memory).unsqueeze(0)
+        decoder_input = self.get_go_frame(memory)
 
         self.initialize_decoder_states(memory, mask=None)
 
@@ -452,7 +452,7 @@ class Decoder(nn.Module):
         return mel_outputs, gate_outputs, alignments
 
 
-
+# https://github.com/KinglittleQ/GST-Tacotron/blob/master/GST.py
 class ReferenceEncoder(nn.Module):
     '''
     inputs --- [N, Ty/r, n_mels*r]  mels
@@ -499,53 +499,6 @@ class ReferenceEncoder(nn.Module):
         for i in range(n_convs):
             L = (L - kernel_size + 2 * pad) // stride + 1
         return L
-
-
-# class RefConv2d(nn.Module):
-#
-#     def __init__(self, in_channels, out_channels, kernel_size, stride=1, dilation=1):
-#         super(RefConv2d, self).__init__()
-#         self.F = kernel_size
-#         self.S = stride
-#         self.D = dilation
-#         self.layer = nn.Conv2d(in_channels, out_channels, kernel_size, stride, dilation=dilation)
-#         self.batchnorm = nn.BatchNorm2d(out_channels)
-#     def forward(self, x_in):
-#         N, C, H, W = x_in.shape
-#         H2 = math.ceil(H / self.S)
-#         W2 = math.ceil(W / self.S)
-#         Pr = (H2 - 1) * self.S + (self.F - 1) * self.D + 1 - H
-#         Pc = (W2 - 1) * self.S + (self.F - 1) * self.D + 1 - W
-#         x_pad = nn.ZeroPad2d((Pr//2, Pr - Pr//2, Pc//2, Pc - Pc//2))(x_in)
-#         x_out = self.layer(x_pad)
-#         x_out = self.batchnorm(x_out)
-#         return x_out
-
-
-
-# def referenceencoder(x):
-#     x = x.unsqueeze(1)
-#     x = nn.Sequential(
-#         RefConv2d(1, 32, 3, stride=2),
-#         nn.ReLU(),
-#         RefConv2d(32, 32, 3, stride=2),
-#         nn.ReLU(),
-#         RefConv2d(32, 64, 3, stride=2),
-#         nn.ReLU(),
-#         RefConv2d(64, 64, 3, stride=2),
-#         nn.ReLU(),
-#         RefConv2d(64, 128, 3, stride=2),
-#         nn.ReLU(),
-#         RefConv2d(128, 128, 3, stride=2),
-#         nn.ReLU())(x)
-#     x = torch.transpose(x, 1, 2)
-#     print('after transpose', x.shape)
-#     x = x.view(x.shape[0], x.shape[1], -1)  # Size([batch, reference_input_length//64, 128*num_mel_channels//64])
-#     print('before input to rnn', x.shape)
-#     x = nn.GRU(x.shape[-1], 128)(x)
-#     x = nn.Linear(128, 128)(x)
-#     x = nn.Tanh()(x)
-#     return x
 
 
 class Tacotron2(nn.Module):
