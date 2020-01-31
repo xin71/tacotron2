@@ -522,6 +522,7 @@ class Tacotron2(nn.Module):
     def parse_batch(self, batch):
         text_padded, input_lengths, mel_padded, gate_padded, \
             output_lengths = batch
+        print('Text_padded: ', text_padded)
         text_padded = to_gpu(text_padded).long()
         input_lengths = to_gpu(input_lengths).long()
         max_len = torch.max(input_lengths.data).item()

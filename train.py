@@ -225,7 +225,9 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                 param_group['lr'] = learning_rate
 
             model.zero_grad()
+            print('================= ORIGINAL SPEAKER =================')
             x, y = model.parse_batch(batch)
+            print('================== Reference SPEAKER')
             x_alt, y_alt = model.parse_batch(batch_alt)
             y_pred = model((x, x_alt))
             loss = criterion(y_pred, y)
