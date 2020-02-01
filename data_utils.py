@@ -14,7 +14,7 @@ class TextMelLoader(torch.utils.data.Dataset):
         2) normalizes text and converts them to sequences of one-hot vectors
         3) computes mel-spectrograms from audio files.
     """
-    def __init__(self, audiopaths_and_text, hparams):
+    def __init__(self, audiopaths_and_text, hparams, val_flag=False):
         self.audiopaths_and_text = load_filepaths_and_text(audiopaths_and_text)
         self.text_cleaners = hparams.text_cleaners
         self.max_wav_value = hparams.max_wav_value
@@ -24,15 +24,51 @@ class TextMelLoader(torch.utils.data.Dataset):
             hparams.filter_length, hparams.hop_length, hparams.win_length,
             hparams.n_mel_channels, hparams.sampling_rate, hparams.mel_fmin,
             hparams.mel_fmax)
-        # random.seed(1234)
-        # random.shuffle(self.audiopaths_and_text)
+        self.val_flag = val_flag
+        random.seed(1234)
+        random.shuffle(self.audiopaths_and_text)
+
+    def get_ref_audiopath(self, data_path):
+
+        def check_np_length(path):
+            data = np.load(path)
+            _, length = data.shape
+
+            if int(length * 200) < (12 * 16000):
+                return True
+            else:
+                return False
+
+        def random_sample(used_path, all_path):
+            all_path.remove(used_path)
+            path = random.sample(all_path, 1)[0]
+            while True:
+                if not check_np_length(path):
+                    path = random.sample(all_path, 1)[0]
+                else:
+                    return path
+
+        data_folder_path = data_path.split('/')[:-1]
+        data_folder_path = '/'.join(data_folder_path)
+        all_wav_data_folder = sorted(glob.glob(data_folder_path + '/*.npy'))
+        alt_wav_path = random_sample(data_path, all_wav_data_folder)
+        return alt_wav_path
 
     def get_mel_text_pair(self, audiopath_and_text):
         # separate filename and text
         audiopath, text = audiopath_and_text[0], audiopath_and_text[1]
         text = self.get_text(text)
         mel = self.get_mel(audiopath)
-        return (text, mel)
+        if not self.val_flag:
+            print('raw audio', audiopath)
+            # Get reference audiopath
+            ref_audiopath = self.get_ref_audiopath(audiopath)
+            print('ref audio', ref_audiopath)
+            print('==========================================')
+            ref_mel = self.get_mel(ref_audiopath)
+            return (text, mel, ref_mel)
+        else:
+            return (text, mel)
 
     def get_mel(self, filename):
         if not self.load_mel_from_disk:
@@ -68,8 +104,9 @@ class TextMelLoader(torch.utils.data.Dataset):
 class TextMelCollate():
     """ Zero-pads model inputs and targets based on number of frames per setep
     """
-    def __init__(self, n_frames_per_step):
+    def __init__(self, n_frames_per_step, val_flag=False):
         self.n_frames_per_step = n_frames_per_step
+        self.val_flag = val_flag
 
     def __call__(self, batch):
         """Collate's training batch from normalized text and mel-spectrogram
@@ -96,6 +133,7 @@ class TextMelCollate():
             max_target_len += self.n_frames_per_step - max_target_len % self.n_frames_per_step
             assert max_target_len % self.n_frames_per_step == 0
 
+
         # include mel padded and gate padded
         mel_padded = torch.FloatTensor(len(batch), num_mels, max_target_len)
         mel_padded.zero_()
@@ -107,6 +145,30 @@ class TextMelCollate():
             mel_padded[i, :, :mel.size(1)] = mel
             gate_padded[i, mel.size(1)-1:] = 1
             output_lengths[i] = mel.size(1)
+        # ==========Reference mel-spec=======================
+        if not self.val_flag:
+            # Right zero-pad ref-mel-spec
+            num_mels_ref = batch[0][2].size(0)
+            max_target_len_ref = max([x[2].size(1) for x in batch])
+            if max_target_len_ref % self.n_frames_per_step != 0:
+                max_target_len_ref += self.n_frames_per_step - max_target_len_ref % self.n_frames_per_step
+                assert max_target_len_ref % self.n_frames_per_step == 0
 
-        return text_padded, input_lengths, mel_padded, gate_padded, \
-            output_lengths
+            # include mel padded and gate padded
+            mel_padded_ref = torch.FloatTensor(len(batch), num_mels_ref, max_target_len_ref)
+            mel_padded_ref.zero_()
+            gate_padded_ref = torch.FloatTensor(len(batch), max_target_len_ref)
+            gate_padded_ref.zero_()
+            output_lengths_ref = torch.LongTensor(len(batch))
+            for i in range(len(ids_sorted_decreasing)):
+                mel_ref = batch[ids_sorted_decreasing[i]][2]
+                mel_padded_ref[i, :, :mel_ref.size(1)] = mel_ref
+                gate_padded_ref[i, mel_ref.size(1)-1:] = 1
+                output_lengths_ref[i] = mel_ref.size(1)
+
+            return text_padded, input_lengths, mel_padded, gate_padded, \
+                output_lengths, mel_padded_ref, gate_padded_ref, output_lengths_ref
+        else:
+            return text_padded, input_lengths, mel_padded, gate_padded, \
+                   output_lengths
+
