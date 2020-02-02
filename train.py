@@ -131,7 +131,9 @@ def validate(model, criterion, valset, iteration, batch_size, n_gpus,
                                 pin_memory=False, collate_fn=collate_fn)
 
         val_loss = 0.0
+        print('length of val dataloader', len(val_loader))
         for i, batch in enumerate(val_loader):
+            print('index: ', i)
             x, y = model.parse_batch(batch)
             y_pred = model(x)
             loss = criterion(y_pred, y)
@@ -244,8 +246,8 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                     reduced_loss, grad_norm, learning_rate, duration, iteration)
 
             if not is_overflow and (iteration % hparams.iters_per_validat == 0):
-                validate(model, criterion, valset, valset_alt, iteration,
-                         hparams.batch_size, n_gpus, collate_fn_val, logger,
+                validate(model, criterion, valset, iteration,
+                         hparams.batch_size, collate_fn, n_gpus, logger,
                          hparams.distributed_run, rank)
                 if rank == 0:
                     if iteration % hparams.iters_per_checkpoint == 0:

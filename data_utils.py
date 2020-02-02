@@ -24,7 +24,6 @@ class TextMelLoader(torch.utils.data.Dataset):
             hparams.filter_length, hparams.hop_length, hparams.win_length,
             hparams.n_mel_channels, hparams.sampling_rate, hparams.mel_fmin,
             hparams.mel_fmax)
-        self.val_flag = val_flag
         random.seed(1234)
         random.shuffle(self.audiopaths_and_text)
 
@@ -101,9 +100,8 @@ class TextMelLoader(torch.utils.data.Dataset):
 class TextMelCollate():
     """ Zero-pads model inputs and targets based on number of frames per setep
     """
-    def __init__(self, n_frames_per_step, val_flag=False):
+    def __init__(self, n_frames_per_step):
         self.n_frames_per_step = n_frames_per_step
-        self.val_flag = val_flag
 
     def __call__(self, batch):
         """Collate's training batch from normalized text and mel-spectrogram
