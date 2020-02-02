@@ -519,36 +519,22 @@ class Tacotron2(nn.Module):
         self.ref_encoder = ReferenceEncoder(hparams)
         self.hparams = hparams
 
-    def parse_batch(self, batch, val_flag):
-        if val_flag:
-            text_padded, input_lengths, mel_padded, gate_padded, \
-            output_lengths = batch
-            text_padded = to_gpu(text_padded).long()
-            input_lengths = to_gpu(input_lengths).long()
-            max_len = torch.max(input_lengths.data).item()
-            mel_padded = to_gpu(mel_padded).float()
-            gate_padded = to_gpu(gate_padded).float()
-            output_lengths = to_gpu(output_lengths).long()
-            return (
-                (text_padded, input_lengths, mel_padded, max_len,
-                 output_lengths),
-                (mel_padded, gate_padded))
-        else:
-            text_padded, input_lengths, mel_padded, gate_padded, \
-                output_lengths, mel_padded_ref, gate_padded_ref, output_lengths_ref = batch
-            text_padded = to_gpu(text_padded).long()
-            input_lengths = to_gpu(input_lengths).long()
-            max_len = torch.max(input_lengths.data).item()
-            mel_padded = to_gpu(mel_padded).float()
-            gate_padded = to_gpu(gate_padded).float()
-            output_lengths = to_gpu(output_lengths).long()
-            mel_padded_ref = to_gpu(mel_padded_ref).float()
-            gate_padded_ref = to_gpu(gate_padded_ref).float()
-            output_lengths_ref = to_gpu(output_lengths_ref).long()
+    def parse_batch(self, batch):
+        text_padded, input_lengths, mel_padded, gate_padded, \
+        output_lengths, mel_padded_ref, gate_padded_ref, output_lengths_ref = batch
+        text_padded = to_gpu(text_padded).long()
+        input_lengths = to_gpu(input_lengths).long()
+        max_len = torch.max(input_lengths.data).item()
+        mel_padded = to_gpu(mel_padded).float()
+        gate_padded = to_gpu(gate_padded).float()
+        output_lengths = to_gpu(output_lengths).long()
+        mel_padded_ref = to_gpu(mel_padded_ref).float()
+        gate_padded_ref = to_gpu(gate_padded_ref).float()
+        output_lengths_ref = to_gpu(output_lengths_ref).long()
 
-            return (
-                (text_padded, input_lengths, mel_padded, mel_padded_ref, max_len, output_lengths, output_lengths_ref),
-                (mel_padded, gate_padded))
+        return (
+            (text_padded, input_lengths, mel_padded, mel_padded_ref, max_len, output_lengths, output_lengths_ref),
+            (mel_padded, gate_padded))
 
     def parse_output(self, outputs, output_lengths=None):
         if self.mask_padding and output_lengths is not None:
@@ -562,13 +548,9 @@ class Tacotron2(nn.Module):
 
         return outputs
 
-    def forward(self, inputs, val_flag):
-        if val_flag:
-            x, x_alt = inputs
-            (text_inputs, text_lengths, mels, max_len, output_lengths) = x
-            (_, _, alt_mels, alt_max_len, alt_output_lengths) = x_alt
-        else:
-            (text_inputs, text_lengths, mels, alt_mels, max_len, output_lengths, alt_output_lengths) = inputs
+    def forward(self, inputs):
+
+        (text_inputs, text_lengths, mels, alt_mels, max_len, output_lengths, alt_output_lengths) = inputs
         batch_size = mels.shape[0]
         text_lengths, output_lengths = text_lengths.data, output_lengths.data
 

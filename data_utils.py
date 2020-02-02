@@ -14,7 +14,7 @@ class TextMelLoader(torch.utils.data.Dataset):
         2) normalizes text and converts them to sequences of one-hot vectors
         3) computes mel-spectrograms from audio files.
     """
-    def __init__(self, audiopaths_and_text, hparams, val_flag=False):
+    def __init__(self, audiopaths_and_text, hparams):
         self.audiopaths_and_text = load_filepaths_and_text(audiopaths_and_text)
         self.text_cleaners = hparams.text_cleaners
         self.max_wav_value = hparams.max_wav_value
@@ -59,16 +59,13 @@ class TextMelLoader(torch.utils.data.Dataset):
         audiopath, text = audiopath_and_text[0], audiopath_and_text[1]
         text = self.get_text(text)
         mel = self.get_mel(audiopath)
-        if not self.val_flag:
-            print('raw audio', audiopath)
-            # Get reference audiopath
-            ref_audiopath = self.get_ref_audiopath(audiopath)
-            print('ref audio', ref_audiopath)
-            print('==========================================')
-            ref_mel = self.get_mel(ref_audiopath)
-            return (text, mel, ref_mel)
-        else:
-            return (text, mel)
+        print('raw audio', audiopath)
+        # Get reference audiopath
+        ref_audiopath = self.get_ref_audiopath(audiopath)
+        print('ref audio', ref_audiopath)
+        print('==========================================')
+        ref_mel = self.get_mel(ref_audiopath)
+        return (text, mel, ref_mel)
 
     def get_mel(self, filename):
         if not self.load_mel_from_disk:
@@ -146,29 +143,24 @@ class TextMelCollate():
             gate_padded[i, mel.size(1)-1:] = 1
             output_lengths[i] = mel.size(1)
         # ==========Reference mel-spec=======================
-        if not self.val_flag:
-            # Right zero-pad ref-mel-spec
-            num_mels_ref = batch[0][2].size(0)
-            max_target_len_ref = max([x[2].size(1) for x in batch])
-            if max_target_len_ref % self.n_frames_per_step != 0:
-                max_target_len_ref += self.n_frames_per_step - max_target_len_ref % self.n_frames_per_step
-                assert max_target_len_ref % self.n_frames_per_step == 0
+        # Right zero-pad ref-mel-spec
+        num_mels_ref = batch[0][2].size(0)
+        max_target_len_ref = max([x[2].size(1) for x in batch])
+        if max_target_len_ref % self.n_frames_per_step != 0:
+            max_target_len_ref += self.n_frames_per_step - max_target_len_ref % self.n_frames_per_step
+            assert max_target_len_ref % self.n_frames_per_step == 0
 
-            # include mel padded and gate padded
-            mel_padded_ref = torch.FloatTensor(len(batch), num_mels_ref, max_target_len_ref)
-            mel_padded_ref.zero_()
-            gate_padded_ref = torch.FloatTensor(len(batch), max_target_len_ref)
-            gate_padded_ref.zero_()
-            output_lengths_ref = torch.LongTensor(len(batch))
-            for i in range(len(ids_sorted_decreasing)):
-                mel_ref = batch[ids_sorted_decreasing[i]][2]
-                mel_padded_ref[i, :, :mel_ref.size(1)] = mel_ref
-                gate_padded_ref[i, mel_ref.size(1)-1:] = 1
-                output_lengths_ref[i] = mel_ref.size(1)
+        # include mel padded and gate padded
+        mel_padded_ref = torch.FloatTensor(len(batch), num_mels_ref, max_target_len_ref)
+        mel_padded_ref.zero_()
+        gate_padded_ref = torch.FloatTensor(len(batch), max_target_len_ref)
+        gate_padded_ref.zero_()
+        output_lengths_ref = torch.LongTensor(len(batch))
+        for i in range(len(ids_sorted_decreasing)):
+            mel_ref = batch[ids_sorted_decreasing[i]][2]
+            mel_padded_ref[i, :, :mel_ref.size(1)] = mel_ref
+            gate_padded_ref[i, mel_ref.size(1) - 1:] = 1
+            output_lengths_ref[i] = mel_ref.size(1)
 
-            return text_padded, input_lengths, mel_padded, gate_padded, \
-                output_lengths, mel_padded_ref, gate_padded_ref, output_lengths_ref
-        else:
-            return text_padded, input_lengths, mel_padded, gate_padded, \
-                   output_lengths
-
+        return text_padded, input_lengths, mel_padded, gate_padded, \
+                   output_lengths, mel_padded_ref, gate_padded_ref, output_lengths_ref
