@@ -58,11 +58,8 @@ class TextMelLoader(torch.utils.data.Dataset):
         audiopath, text = audiopath_and_text[0], audiopath_and_text[1]
         text = self.get_text(text)
         mel = self.get_mel(audiopath)
-        print('raw audio', audiopath)
         # Get reference audiopath
         ref_audiopath = self.get_ref_audiopath(audiopath)
-        print('ref audio', ref_audiopath)
-        print('==========================================')
         ref_mel = self.get_mel(ref_audiopath)
         return (text, mel, ref_mel)
 
