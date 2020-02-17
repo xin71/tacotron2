@@ -50,29 +50,38 @@ def save_spec(data, filepath, output_filename):
         Path(filepath).mkdir(parents=True)
     np.save(os.path.join(filepath, output_filename), data)
 
-#%% IEMOCAP
+# #%% IEMOCAP
 
-SESS_PATH = '/data3/IEMOCAP/IEMOCAP_full_release/Session1/sentences/wav/'
-for sess in list(range(1,6)):
-    temp_sess_path = SESS_PATH.replace('1', str(sess))
-    all_wav_path = sorted(glob.glob(temp_sess_path + '*/*.wav'))
-    for wav_path in all_wav_path:
-        spec = get_mel(wav_path)
-        output_filename = wav_path.split('/')[-1].split('.')[0]
-        spec_path = Path(wav_path.replace('IEMOCAP_full_release', 'IEMOCAP_full_release_spec'))
-        spec_path = str(spec_path.parent)
-        save_spec(spec, spec_path, output_filename)
-    print('Finished Session ', str(sess))
+# SESS_PATH = '/data3/IEMOCAP/IEMOCAP_full_release/Session1/sentences/wav/'
+# for sess in list(range(1,6)):
+#     temp_sess_path = SESS_PATH.replace('1', str(sess))
+#     all_wav_path = sorted(glob.glob(temp_sess_path + '*/*.wav'))
+#     for wav_path in all_wav_path:
+#         spec = get_mel(wav_path)
+#         output_filename = wav_path.split('/')[-1].split('.')[0]
+#         spec_path = Path(wav_path.replace('IEMOCAP_full_release', 'IEMOCAP_full_release_spec'))
+#         spec_path = str(spec_path.parent)
+#         save_spec(spec, spec_path, output_filename)
+#     print('Finished Session ', str(sess))
 
 
-#%% VCTK
+# #%% VCTK
 
-VCTK_PATH = '/data3/VCTK/VCTK-Corpus/wav48/'
-for wav_path in sorted(glob.glob(VCTK_PATH + '*/*.wav')):
+# VCTK_PATH = '/data3/VCTK/VCTK-Corpus/wav48/'
+# for wav_path in sorted(glob.glob(VCTK_PATH + '*/*.wav')):
+#     spec = get_mel(wav_path)
+#     output_filename = wav_path.split('/')[-1].split('.')[0]
+#     spec_path = Path(wav_path.replace('/VCTK/', '/VCTK_spec/'))
+#     spec_path = str(spec_path.parent)
+#     save_spec(spec, spec_path, output_filename)
+
+#%% LJ
+
+LJ_PATH = '/data3/LJSpeech-1.1_16000/wavs/'
+for wav_path in sorted(glob.glob(LJ_PATH + '/*.wav')):
     spec = get_mel(wav_path)
     output_filename = wav_path.split('/')[-1].split('.')[0]
-    spec_path = Path(wav_path.replace('/VCTK/', '/VCTK_spec/'))
+    spec_path = Path(wav_path.replace('/LJSpeech-1.1_16000/', '/LJSpeech-1.1_16000_spec/'))
     spec_path = str(spec_path.parent)
     save_spec(spec, spec_path, output_filename)
-
-
+    print('file: ', output_filename)

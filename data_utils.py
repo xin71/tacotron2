@@ -45,6 +45,11 @@ class TextMelLoader(torch.utils.data.Dataset):
             while True:
                 if not check_np_length(path):
                     path = random.sample(all_path, 1)[0]
+                elif used_path.split('/')[-1][:3] == 'Ses': # check if it is IEMOCAP path
+                    if used_path.split('/')[-1].split('_')[2][0] != path.split('/')[-1].split('_')[2][0]:
+                        path = random.sample(all_path, 1)[0]
+                    else:
+                        return path
                 else:
                     return path
 
@@ -58,6 +63,10 @@ class TextMelLoader(torch.utils.data.Dataset):
         # separate filename and text
         audiopath, text = audiopath_and_text[0], audiopath_and_text[1]
         text = self.get_text(text)
+        if len(text) == 0:
+            print('==== DEBUG ====')
+            print('path: ', audiopath)
+            raise ValueError
         mel = self.get_mel(audiopath)
         if not self.val_flag:
             # Get reference audiopath

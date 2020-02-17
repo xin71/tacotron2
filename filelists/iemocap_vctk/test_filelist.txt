@@ -269,7 +269,6 @@
 /data3/IEMOCAP/IEMOCAP_full_release_spec/Session5/sentences/wav/Ses05F_impro04/Ses05F_impro04_F005.npy|It's not fair
 /data3/IEMOCAP/IEMOCAP_full_release_spec/Session5/sentences/wav/Ses05F_impro04/Ses05F_impro04_M005.npy|You have to be willing - You have to be willing to start you know at the bottom and work your way up. an
 /data3/IEMOCAP/IEMOCAP_full_release_spec/Session5/sentences/wav/Ses05F_impro04/Ses05F_impro04_F006.npy|That's fine.  I'd be willing to start anywhere.  I can't get a job
-/data3/IEMOCAP/IEMOCAP_full_release_spec/Session5/sentences/wav/Ses05F_impro04/Ses05F_impro04_M006.npy|
 /data3/IEMOCAP/IEMOCAP_full_release_spec/Session5/sentences/wav/Ses05F_impro04/Ses05F_impro04_F007.npy|I mean, on six seven and five an hour does not - does not pay the bills I mean
 /data3/IEMOCAP/IEMOCAP_full_release_spec/Session5/sentences/wav/Ses05F_impro04/Ses05F_impro04_M007.npy|No, it doesn't pay the bills, but it would pay something.  And it would help you get somewhere else
 /data3/IEMOCAP/IEMOCAP_full_release_spec/Session5/sentences/wav/Ses05F_impro04/Ses05F_impro04_F008.npy|I still can't live on in six seven and five.  It's not possible in Los Angeles.  Housing is too expensive

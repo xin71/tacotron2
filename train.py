@@ -179,7 +179,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
     learning_rate = hparams.learning_rate
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
                                  weight_decay=hparams.weight_decay)
-
+    print('Finish intilizing optimizer!')
     if hparams.fp16_run:
         from apex import amp
         model, optimizer = amp.initialize(
@@ -194,7 +194,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
         output_directory, log_directory, rank)
 
     train_loader, valset, valset_alt, collate_fn, collate_fn_val = prepare_dataloaders(hparams)
-
+    print('Finish prepare_dataloaders!')
     # Load checkpoint if one exists
     iteration = 0
     epoch_offset = 0
@@ -211,6 +211,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
             epoch_offset = max(0, int(iteration / len(train_loader)))
 
     model.train()
+    print('Start training!')
     is_overflow = False
     # ================ MAIN TRAINNIG LOOP! ===================
     for epoch in range(epoch_offset, hparams.epochs):
@@ -283,7 +284,7 @@ if __name__ == '__main__':
                         required=False, help='Distributed group name')
     parser.add_argument('--hparams', type=str,
                         required=False, help='comma separated name=value pairs')
-
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     args = parser.parse_args()
     hparams = create_hparams(args.hparams)
 
