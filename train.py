@@ -284,7 +284,7 @@ if __name__ == '__main__':
                         required=False, help='Distributed group name')
     parser.add_argument('--hparams', type=str,
                         required=False, help='comma separated name=value pairs')
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    #os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     args = parser.parse_args()
     hparams = create_hparams(args.hparams)
 
