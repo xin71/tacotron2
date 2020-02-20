@@ -29,9 +29,13 @@ def create_hparams(hparams_string=None, verbose=False):
         # training_files='filelists/train_filelist_vctk.txt',
         # validation_files='filelists/test_filelist_vctk.txt',
         # validation_files_alt='filelists/test_filelist_vctk_alt.txt',
-        training_files='filelists/iemocap_vctk/train_filelist.txt',
-        validation_files='filelists/iemocap_vctk/test_filelist.txt',
-        validation_files_alt='filelists/iemocap_vctk/test_filelist_alt.txt',
+        # training_files='filelists/iemocap_vctk/train_filelist.txt',
+        # validation_files='filelists/iemocap_vctk/test_filelist.txt',
+        # validation_files_alt='filelists/iemocap_vctk/test_filelist_alt.txt',
+        training_files='filelists/IEMOCAP/train_filelist.txt',
+        validation_files='filelists/IEMOCAP/test_filelist.txt',
+        validation_files_alt='filelists/IEMOCAP/test_filelist_speaker.txt',
+        validation_files_alt_emo='filelists/IEMOCAP/test_filelist_emotion.txt',
         text_cleaners=['english_cleaners'],
 
         ################################
@@ -57,7 +61,7 @@ def create_hparams(hparams_string=None, verbose=False):
         encoder_kernel_size=5,
         encoder_n_convolutions=3,
         encoder_embedding_dim=512,
-        final_encoder_embedding_dim=640,
+        final_encoder_embedding_dim=768, # adding speaker embedding only, it is 640
 
         # Decoder parameters
         n_frames_per_step=1,  # currently only 1 is supported

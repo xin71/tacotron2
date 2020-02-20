@@ -516,7 +516,8 @@ class Tacotron2(nn.Module):
         self.encoder = Encoder(hparams)
         self.decoder = Decoder(hparams)
         self.postnet = Postnet(hparams)
-        self.ref_encoder = ReferenceEncoder(hparams)
+        self.ref_encoder = ReferenceEncoder(hparams) # speaker
+        self.ref_encoder_emotion = ReferenceEncoder(hparams) # emotion
         self.hparams = hparams
 
     def parse_batch(self, batch, val_flag):
@@ -535,7 +536,8 @@ class Tacotron2(nn.Module):
                 (mel_padded, gate_padded))
         else:
             text_padded, input_lengths, mel_padded, gate_padded, \
-                output_lengths, mel_padded_ref, gate_padded_ref, output_lengths_ref = batch
+                output_lengths, mel_padded_ref, gate_padded_ref, output_lengths_ref, \
+                mel_padded_ref_emo, gate_padded_ref_emo, output_lengths_ref_emo = batch
             text_padded = to_gpu(text_padded).long()
             input_lengths = to_gpu(input_lengths).long()
             max_len = torch.max(input_lengths.data).item()
@@ -545,10 +547,13 @@ class Tacotron2(nn.Module):
             mel_padded_ref = to_gpu(mel_padded_ref).float()
             gate_padded_ref = to_gpu(gate_padded_ref).float()
             output_lengths_ref = to_gpu(output_lengths_ref).long()
+            mel_padded_ref_emo = to_gpu(mel_padded_ref_emo).float()
+            gate_padded_ref_emo = to_gpu(gate_padded_ref_emo).float()
+            output_lengths_ref_emo = to_gpu(output_lengths_ref_emo).long()
 
             return (
-                (text_padded, input_lengths, mel_padded, mel_padded_ref, max_len, output_lengths, output_lengths_ref),
-                (mel_padded, gate_padded))
+                (text_padded, input_lengths, mel_padded, mel_padded_ref, mel_padded_ref_emo, max_len,
+                 output_lengths, output_lengths_ref, output_lengths_ref_emo),(mel_padded, gate_padded))
 
     def parse_output(self, outputs, output_lengths=None):
         if self.mask_padding and output_lengths is not None:
@@ -564,25 +569,30 @@ class Tacotron2(nn.Module):
 
     def forward(self, inputs, val_flag):
         if val_flag:
-            x, x_alt = inputs
+            x, x_alt, x_alt_emo = inputs
             (text_inputs, text_lengths, mels, max_len, output_lengths) = x
             (_, _, alt_mels, alt_max_len, alt_output_lengths) = x_alt
+            (_, _, alt_mels_emo, alt_max_len_emo, alt_output_lengths_emo) = x_alt_emo
         else:
-            (text_inputs, text_lengths, mels, alt_mels, max_len, output_lengths, alt_output_lengths) = inputs
+            (text_inputs, text_lengths, mels, alt_mels, alt_mels_emo, max_len, output_lengths, alt_output_lengths,
+             alt_output_lengths_emo) = inputs
         batch_size = mels.shape[0]
         text_lengths, output_lengths = text_lengths.data, output_lengths.data
-
+        alt_mels_emo = alt_mels
         embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
         encoder_outputs = self.encoder(embedded_inputs, text_lengths)
         encoder_ref_outputs = self.ref_encoder(alt_mels, self.hparams)
+        encoder_ref_outputs_emo = self.ref_encoder_emotion(alt_mels_emo, self.hparams)
 
         expand_ref_number = encoder_outputs.shape[1]
         encoder_ref_outputs = encoder_ref_outputs.repeat(1, expand_ref_number).view(batch_size,
                                                                                     expand_ref_number, -1)
-        final_encoder_out = torch.cat((encoder_outputs, encoder_ref_outputs), -1)
+        encoder_ref_outputs_emo = encoder_ref_outputs_emo.repeat(1, expand_ref_number).view(batch_size,
+                                                                                    expand_ref_number, -1)
 
-        mel_outputs, gate_outputs, alignments = self.decoder(
-            final_encoder_out, mels, memory_lengths=text_lengths)
+        final_encoder_out = torch.cat((encoder_outputs, encoder_ref_outputs, encoder_ref_outputs_emo), -1)
+
+        mel_outputs, gate_outputs, alignments = self.decoder(final_encoder_out, mels, memory_lengths=text_lengths)
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
 

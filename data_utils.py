@@ -7,6 +7,8 @@ import layers
 from utils import load_wav_to_torch, load_filepaths_and_text
 from text import text_to_sequence
 import glob
+import pickle
+
 
 class TextMelLoader(torch.utils.data.Dataset):
     """
@@ -59,6 +61,34 @@ class TextMelLoader(torch.utils.data.Dataset):
         alt_wav_path = random_sample(data_path, all_wav_data_folder)
         return alt_wav_path
 
+
+    def get_ref_audiopath_emo(self, data_path):
+
+        with open('./filelists/IEMOCAP/emotion_path_dict.pickle', 'wb') as handle:
+            pickle.dump(emotion_path_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        with open('./filelists/IEMOCAP/path_emotion_dict.pickle', 'wb') as handle:
+            pickle.dump(path_emotion_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        def check_np_length(path):
+            data = np.load(path)
+            _, length = data.shape
+
+            if int(length * 200) < (12 * 16000):
+                return True
+            else:
+                return False
+
+        def random_sample_emotion(used_path, used_emo):
+            all_path = list(emotion_path_dict[used_emo])
+            all_path.remove(used_path)
+            return random.sample(all_path, 1)[0]
+
+        used_emo = path_emotion_dict[data_path][0]
+        alt_wav_path = random_sample_emotion(data_path, used_emo)
+        print('speaker path: ', alt_wav_path)
+        return alt_wav_path
+
     def get_mel_text_pair(self, audiopath_and_text):
         # separate filename and text
         audiopath, text = audiopath_and_text[0], audiopath_and_text[1]
@@ -72,7 +102,9 @@ class TextMelLoader(torch.utils.data.Dataset):
             # Get reference audiopath
             ref_audiopath = self.get_ref_audiopath(audiopath)
             ref_mel = self.get_mel(ref_audiopath)
-            return (text, mel, ref_mel)
+            ref_audiopath_emo = self.get_ref_audiopath_emo(audiopath)
+            ref_mel_emo = self.get_mel(ref_audiopath_emo)
+            return (text, mel, ref_mel, ref_mel_emo)
         else:
             return (text, mel)
 
@@ -153,6 +185,7 @@ class TextMelCollate():
             output_lengths[i] = mel.size(1)
         # ==========Reference mel-spec=======================
         if not self.val_flag:
+            #==========Speaker mel-spec==========
             # Right zero-pad ref-mel-spec
             num_mels_ref = batch[0][2].size(0)
             max_target_len_ref = max([x[2].size(1) for x in batch])
@@ -171,9 +204,29 @@ class TextMelCollate():
                 mel_padded_ref[i, :, :mel_ref.size(1)] = mel_ref
                 gate_padded_ref[i, mel_ref.size(1)-1:] = 1
                 output_lengths_ref[i] = mel_ref.size(1)
+            # ==========Emotion mel-spec==========
+            num_mels_ref_emo = batch[0][3].size(0)
+            max_target_len_ref_emo = max([x[3].size(1) for x in batch])
+            if max_target_len_ref_emo % self.n_frames_per_step != 0:
+                max_target_len_ref_emo += self.n_frames_per_step - max_target_len_ref_emo % self.n_frames_per_step
+                assert max_target_len_ref_emo % self.n_frames_per_step == 0
+
+            # include mel padded and gate padded
+            mel_padded_ref_emo = torch.FloatTensor(len(batch), num_mels_ref_emo, max_target_len_ref_emo)
+            mel_padded_ref_emo.zero_()
+            gate_padded_ref_emo = torch.FloatTensor(len(batch), max_target_len_ref_emo)
+            gate_padded_ref_emo.zero_()
+            output_lengths_ref_emo = torch.LongTensor(len(batch))
+            for i in range(len(ids_sorted_decreasing)):
+                mel_ref_emo = batch[ids_sorted_decreasing[i]][3]
+                mel_padded_ref_emo[i, :, :mel_ref_emo.size(1)] = mel_ref_emo
+                gate_padded_ref_emo[i, mel_ref_emo.size(1)-1:] = 1
+                output_lengths_ref_emo[i] = mel_ref_emo.size(1)
+
 
             return text_padded, input_lengths, mel_padded, gate_padded, \
-                output_lengths, mel_padded_ref, gate_padded_ref, output_lengths_ref
+                output_lengths, mel_padded_ref, gate_padded_ref, output_lengths_ref, \
+                   mel_padded_ref_emo, gate_padded_ref_emo, output_lengths_ref_emo
         else:
             return text_padded, input_lengths, mel_padded, gate_padded, \
                    output_lengths
