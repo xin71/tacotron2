@@ -27,8 +27,8 @@ class TextMelLoader(torch.utils.data.Dataset):
             hparams.n_mel_channels, hparams.sampling_rate, hparams.mel_fmin,
             hparams.mel_fmax)
         self.val_flag = val_flag
-        random.seed(1234)
-        random.shuffle(self.audiopaths_and_text)
+        # random.seed(1234)
+        # random.shuffle(self.audiopaths_and_text)
 
     def get_ref_audiopath(self, data_path):
 
@@ -59,16 +59,18 @@ class TextMelLoader(torch.utils.data.Dataset):
         data_folder_path = '/'.join(data_folder_path)
         all_wav_data_folder = sorted(glob.glob(data_folder_path + '/*.npy'))
         alt_wav_path = random_sample(data_path, all_wav_data_folder)
+        # print('original path: ', data_path)
+        # print('speaker path: ', alt_wav_path)
         return alt_wav_path
 
 
     def get_ref_audiopath_emo(self, data_path):
 
-        with open('./filelists/IEMOCAP/emotion_path_dict.pickle', 'wb') as handle:
-            pickle.dump(emotion_path_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        with open('./filelists/IEMOCAP/emotion_path_dict.pickle', 'rb') as handle:
+            emotion_path_dict = pickle.load(handle)
 
-        with open('./filelists/IEMOCAP/path_emotion_dict.pickle', 'wb') as handle:
-            pickle.dump(path_emotion_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        with open('./filelists/IEMOCAP/path_emotion_dict.pickle', 'rb') as handle:
+            path_emotion_dict = pickle.load(handle)
 
         def check_np_length(path):
             data = np.load(path)
@@ -79,14 +81,31 @@ class TextMelLoader(torch.utils.data.Dataset):
             else:
                 return False
 
-        def random_sample_emotion(used_path, used_emo):
+        def random_sample_iemocap(used_path):
+            used_emo = path_emotion_dict[used_path][0]
             all_path = list(emotion_path_dict[used_emo])
             all_path.remove(used_path)
             return random.sample(all_path, 1)[0]
 
-        used_emo = path_emotion_dict[data_path][0]
-        alt_wav_path = random_sample_emotion(data_path, used_emo)
-        print('speaker path: ', alt_wav_path)
+        def random_sample_emotion(used_path, all_path):
+            all_path.remove(used_path)
+            path = random.sample(all_path, 1)[0]
+
+            if used_path.split('/')[-1][:3] == 'Ses':  # check if it is IEMOCAP path
+                return random_sample_iemocap(used_path)
+
+            while True:
+                if not check_np_length(path):
+                    path = random.sample(all_path, 1)[0]
+                else:
+                    return path
+
+        data_folder_path = data_path.split('/')[:-1]
+        data_folder_path = '/'.join(data_folder_path)
+        all_wav_data_folder = sorted(glob.glob(data_folder_path + '/*.npy'))
+        alt_wav_path = random_sample_emotion(data_path, all_wav_data_folder)
+        # print('emotion path: ', alt_wav_path)
+        # print('=========================')
         return alt_wav_path
 
     def get_mel_text_pair(self, audiopath_and_text):
@@ -133,7 +152,10 @@ class TextMelLoader(torch.utils.data.Dataset):
         return text_norm
 
     def __getitem__(self, index):
-        return self.get_mel_text_pair(self.audiopaths_and_text[index])
+        try:
+            return self.get_mel_text_pair(self.audiopaths_and_text[index])
+        except IndexError:
+            print('get_item DEBUG: ', self.audiopaths_and_text[index])
 
     def __len__(self):
         return len(self.audiopaths_and_text)
@@ -153,6 +175,7 @@ class TextMelCollate():
         batch: [text_normalized, mel_normalized]
         """
         # Right zero-pad all one-hot text sequences to max input length
+
         input_lengths, ids_sorted_decreasing = torch.sort(
             torch.LongTensor([len(x[0]) for x in batch]),
             dim=0, descending=True)
@@ -222,8 +245,6 @@ class TextMelCollate():
                 mel_padded_ref_emo[i, :, :mel_ref_emo.size(1)] = mel_ref_emo
                 gate_padded_ref_emo[i, mel_ref_emo.size(1)-1:] = 1
                 output_lengths_ref_emo[i] = mel_ref_emo.size(1)
-
-
             return text_padded, input_lengths, mel_padded, gate_padded, \
                 output_lengths, mel_padded_ref, gate_padded_ref, output_lengths_ref, \
                    mel_padded_ref_emo, gate_padded_ref_emo, output_lengths_ref_emo

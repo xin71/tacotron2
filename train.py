@@ -46,7 +46,6 @@ def prepare_dataloaders(hparams):
     valset_alt_emo = TextMelLoader(hparams.validation_files_alt_emo, hparams, val_flag=True)
     collate_fn = TextMelCollate(hparams.n_frames_per_step)
     collate_fn_val = TextMelCollate(hparams.n_frames_per_step, val_flag=True)
-    collate_fn_val_emo = TextMelCollate(hparams.n_frames_per_step, val_flag=True)
 
     if hparams.distributed_run:
         train_sampler = DistributedSampler(trainset)
@@ -61,8 +60,7 @@ def prepare_dataloaders(hparams):
                               batch_size=hparams.batch_size, pin_memory=False,
                               drop_last=True, collate_fn=collate_fn)
 
-
-    return train_loader, valset, valset_alt, valset_alt_emo, collate_fn, collate_fn_val, collate_fn_val_emo
+    return train_loader, valset, valset_alt, valset_alt_emo, collate_fn, collate_fn_val
 
 
 def prepare_directories_and_logger(output_directory, log_directory, rank):
@@ -125,7 +123,7 @@ def save_checkpoint(model, optimizer, learning_rate, iteration, filepath):
 
 
 def validate(model, criterion, valset, valset_alt, valset_alt_emo, iteration, batch_size, n_gpus,
-             collate_fn, collate_fn_alt, collate_fn_alt_emo, logger, distributed_run, rank):
+             collate_fn, logger, distributed_run, rank):
     """Handles all the validation scoring and printing"""
     val_flag = True
     model.eval()
@@ -137,11 +135,11 @@ def validate(model, criterion, valset, valset_alt, valset_alt_emo, iteration, ba
         val_sampler_alt = DistributedSampler(valset_alt) if distributed_run else None
         val_loader_alt = DataLoader(valset_alt, sampler=val_sampler_alt, num_workers=1,
                                 shuffle=False, batch_size=batch_size,
-                                pin_memory=False, collate_fn=collate_fn_alt)
+                                pin_memory=False, collate_fn=collate_fn)
         val_sampler_alt_emo = DistributedSampler(valset_alt_emo) if distributed_run else None
         val_loader_alt_emo = DataLoader(valset_alt_emo, sampler=val_sampler_alt_emo, num_workers=1,
                                 shuffle=False, batch_size=batch_size,
-                                pin_memory=False, collate_fn=collate_fn_alt_emo)
+                                pin_memory=False, collate_fn=collate_fn)
 
         val_loss = 0.0
         for i, (batch, batch_alt, batch_alt_emo) in enumerate(zip(val_loader, val_loader_alt, val_loader_alt_emo)):
@@ -157,6 +155,7 @@ def validate(model, criterion, valset, valset_alt, valset_alt_emo, iteration, ba
             val_loss += reduced_val_loss
         val_loss = val_loss / (i + 1)
 
+    print('Start training again!')
     model.train()
     if rank == 0:
         print("Validation loss {}: {:9f}  ".format(iteration, reduced_val_loss))
@@ -200,7 +199,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
     logger = prepare_directories_and_logger(
         output_directory, log_directory, rank)
 
-    train_loader, valset, valset_alt, valset_alt_emo, collate_fn, collate_fn_val, collate_fn_val_emo = prepare_dataloaders(hparams)
+    train_loader, valset, valset_alt, valset_alt_emo, collate_fn, collate_fn_val = prepare_dataloaders(hparams)
     print('Finish prepare_dataloaders!')
     # Load checkpoint if one exists
     iteration = 0
@@ -260,8 +259,9 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                     reduced_loss, grad_norm, learning_rate, duration, iteration)
 
             if not is_overflow and (iteration % hparams.iters_per_validat == 0):
+                print('start validating!')
                 validate(model, criterion, valset, valset_alt, valset_alt_emo, iteration,
-                         hparams.batch_size, n_gpus, collate_fn_val, collate_fn_val_alt, collate_fn_val_alt_emo, logger,
+                         hparams.batch_size, n_gpus, collate_fn_val, logger,
                          hparams.distributed_run, rank)
                 if rank == 0:
                     if iteration % hparams.iters_per_checkpoint == 0:

@@ -522,8 +522,7 @@ class Tacotron2(nn.Module):
 
     def parse_batch(self, batch, val_flag):
         if val_flag:
-            text_padded, input_lengths, mel_padded, gate_padded, \
-            output_lengths = batch
+            text_padded, input_lengths, mel_padded, gate_padded, output_lengths = batch
             text_padded = to_gpu(text_padded).long()
             input_lengths = to_gpu(input_lengths).long()
             max_len = torch.max(input_lengths.data).item()
@@ -531,8 +530,7 @@ class Tacotron2(nn.Module):
             gate_padded = to_gpu(gate_padded).float()
             output_lengths = to_gpu(output_lengths).long()
             return (
-                (text_padded, input_lengths, mel_padded, max_len,
-                 output_lengths),
+                (text_padded, input_lengths, mel_padded, max_len, output_lengths),
                 (mel_padded, gate_padded))
         else:
             text_padded, input_lengths, mel_padded, gate_padded, \
@@ -550,7 +548,6 @@ class Tacotron2(nn.Module):
             mel_padded_ref_emo = to_gpu(mel_padded_ref_emo).float()
             gate_padded_ref_emo = to_gpu(gate_padded_ref_emo).float()
             output_lengths_ref_emo = to_gpu(output_lengths_ref_emo).long()
-
             return (
                 (text_padded, input_lengths, mel_padded, mel_padded_ref, mel_padded_ref_emo, max_len,
                  output_lengths, output_lengths_ref, output_lengths_ref_emo),(mel_padded, gate_padded))
@@ -578,12 +575,10 @@ class Tacotron2(nn.Module):
              alt_output_lengths_emo) = inputs
         batch_size = mels.shape[0]
         text_lengths, output_lengths = text_lengths.data, output_lengths.data
-        alt_mels_emo = alt_mels
         embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
         encoder_outputs = self.encoder(embedded_inputs, text_lengths)
         encoder_ref_outputs = self.ref_encoder(alt_mels, self.hparams)
         encoder_ref_outputs_emo = self.ref_encoder_emotion(alt_mels_emo, self.hparams)
-
         expand_ref_number = encoder_outputs.shape[1]
         encoder_ref_outputs = encoder_ref_outputs.repeat(1, expand_ref_number).view(batch_size,
                                                                                     expand_ref_number, -1)
@@ -603,13 +598,13 @@ class Tacotron2(nn.Module):
     def inference(self, inputs):
         input_text, ref_mels = inputs
         embedded_inputs = self.embedding(input_text).transpose(1, 2)
-        print('embeded_inputs shape', embedded_inputs.shape)
+        # print('embeded_inputs shape', embedded_inputs.shape)
         encoder_outputs = self.encoder.inference(embedded_inputs)
         encoder_ref_outputs = self.ref_encoder(ref_mels, self.hparams)
         expand_ref_number = encoder_outputs.shape[1]
         encoder_ref_outputs = encoder_ref_outputs.repeat(1, expand_ref_number).view(1, expand_ref_number, -1)
         final_encoder_out = torch.cat((encoder_outputs, encoder_ref_outputs), -1)
-        print('final_encoder_out', final_encoder_out.shape)
+        # print('final_encoder_out', final_encoder_out.shape)
         mel_outputs, gate_outputs, alignments = self.decoder.inference(
             final_encoder_out)
 
