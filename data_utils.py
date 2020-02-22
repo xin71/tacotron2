@@ -66,10 +66,10 @@ class TextMelLoader(torch.utils.data.Dataset):
 
     def get_ref_audiopath_emo(self, data_path):
 
-        with open('./filelists/iemocap_vctk_lj/emotion_path_dict.pickle', 'rb') as handle:
+        with open('./filelists/IEMOCAP/emotion_path_dict.pickle', 'rb') as handle:
             emotion_path_dict = pickle.load(handle)
 
-        with open('./filelists/iemocap_vctk_lj/path_emotion_dict.pickle', 'rb') as handle:
+        with open('./filelists/IEMOCAP/path_emotion_dict.pickle', 'rb') as handle:
             path_emotion_dict = pickle.load(handle)
 
         def check_np_length(path):
