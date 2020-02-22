@@ -1553,4 +1553,3 @@
 ../data3/IEMOCAP/IEMOCAP_full_release_spec/Session5/sentences/wav/Ses05M_script03_2/Ses05M_script03_2_F042.npy|Beas
 ../data3/IEMOCAP/IEMOCAP_full_release_spec/Session5/sentences/wav/Ses05M_script03_2/Ses05M_script03_2_M045.npy|You're a wicked little vampire.  And I pray to God I never set eyes on you again as long as I live
 ../data3/IEMOCAP/IEMOCAP_full_release_spec/Session5/sentences/wav/Ses05M_script03_2/Ses05M_script03_2_F043.npy|Brut
-../data3/IEMOCAP/IEMOCAP_full_release_spec/Session5/sentences/wav/Ses05M_script03_2/Ses05M_script03_2_F044.npy|pi
