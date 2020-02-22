@@ -29,9 +29,9 @@ def create_hparams(hparams_string=None, verbose=False):
         # training_files='filelists/train_filelist_vctk.txt',
         # validation_files='filelists/test_filelist_vctk.txt',
         # validation_files_alt='filelists/test_filelist_vctk_alt.txt',
-        training_files='filelists/iemocap_vctk/train_filelist.txt',
-        validation_files='filelists/iemocap_vctk/test_filelist.txt',
-        validation_files_alt='filelists/iemocap_vctk/test_filelist_alt.txt',
+        training_files='filelists/iemocap_vctk_lj/train_filelist.txt',
+        validation_files='filelists/iemocap_vctk_lj/test_filelist.txt',
+        validation_files_alt='filelists/iemocap_vctk_lj/test_filelist_alt.txt',
         text_cleaners=['english_cleaners'],
 
         ################################
