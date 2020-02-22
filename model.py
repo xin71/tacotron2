@@ -596,14 +596,16 @@ class Tacotron2(nn.Module):
             output_lengths)
 
     def inference(self, inputs):
-        input_text, ref_mels = inputs
+        input_text, ref_mels, ref_mels_emo = inputs
         embedded_inputs = self.embedding(input_text).transpose(1, 2)
         # print('embeded_inputs shape', embedded_inputs.shape)
         encoder_outputs = self.encoder.inference(embedded_inputs)
         encoder_ref_outputs = self.ref_encoder(ref_mels, self.hparams)
+        encoder_ref_outputs_emo = self.ref_encoder_emotion(ref_mels_emo, self.hparams)
         expand_ref_number = encoder_outputs.shape[1]
         encoder_ref_outputs = encoder_ref_outputs.repeat(1, expand_ref_number).view(1, expand_ref_number, -1)
-        final_encoder_out = torch.cat((encoder_outputs, encoder_ref_outputs), -1)
+        encoder_ref_outputs_emo = encoder_ref_outputs_emo.repeat(1, expand_ref_number).view(1, expand_ref_number, -1)
+        final_encoder_out = torch.cat((encoder_outputs, encoder_ref_outputs, encoder_ref_outputs_emo), -1)
         # print('final_encoder_out', final_encoder_out.shape)
         mel_outputs, gate_outputs, alignments = self.decoder.inference(
             final_encoder_out)
