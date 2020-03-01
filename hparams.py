@@ -26,16 +26,15 @@ def create_hparams(hparams_string=None, verbose=False):
         # Data Parameters             #
         ################################
         load_mel_from_disk=True,
-        # training_files='filelists/train_filelist_vctk.txt',
-        # validation_files='filelists/test_filelist_vctk.txt',
-        # validation_files_alt='filelists/test_filelist_vctk_alt.txt',
-        # training_files='filelists/iemocap_vctk/train_filelist.txt',
-        # validation_files='filelists/iemocap_vctk/test_filelist.txt',
-        # validation_files_alt='filelists/iemocap_vctk/test_filelist_alt.txt',
-        training_files='filelists/IEMOCAP/train_filelist_enhanced.txt',
-        validation_files='filelists/IEMOCAP/test_filelist.txt',
-        validation_files_alt='filelists/IEMOCAP/test_filelist_speaker.txt',
-        validation_files_alt_emo='filelists/IEMOCAP/test_filelist_emotion.txt',
+        # training_files='filelists/IEMOCAP/train_filelist_enhanced.txt',
+        # validation_files='filelists/IEMOCAP/test_filelist.txt',
+        # validation_files_alt='filelists/IEMOCAP/test_filelist_speaker.txt',
+        # validation_files_alt_emo='filelists/IEMOCAP/test_filelist_emotion.txt',
+        training_files='filelists/iemocap_vctk_lj/train_filelist.txt',
+        validation_files='filelists/iemocap_vctk_lj/test_filelist.txt',
+        validation_files_alt='filelists/iemocap_vctk_lj/test_filelist_speaker.txt',
+        validation_files_alt_emo='filelists/iemocap_vctk_lj/test_filelist_emotion.txt',
+
         text_cleaners=['english_cleaners'],
 
         ################################
