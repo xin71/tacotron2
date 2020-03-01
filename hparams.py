@@ -32,7 +32,7 @@ def create_hparams(hparams_string=None, verbose=False):
         # training_files='filelists/iemocap_vctk/train_filelist.txt',
         # validation_files='filelists/iemocap_vctk/test_filelist.txt',
         # validation_files_alt='filelists/iemocap_vctk/test_filelist_alt.txt',
-        training_files='filelists/IEMOCAP/train_filelist.txt',
+        training_files='filelists/IEMOCAP/train_filelist_enhanced.txt',
         validation_files='filelists/IEMOCAP/test_filelist.txt',
         validation_files_alt='filelists/IEMOCAP/test_filelist_speaker.txt',
         validation_files_alt_emo='filelists/IEMOCAP/test_filelist_emotion.txt',
